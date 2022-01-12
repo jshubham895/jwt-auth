@@ -4,8 +4,11 @@ const db = require("./models");
 const { Users } = require("./models");
 
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const { createTokens, validateToken } = require("./JWT");
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/register", (req, res) => {
 	const { username, password } = req.body;
@@ -37,14 +40,21 @@ app.post("/login", async (req, res) => {
 			res
 				.status(400)
 				.json({ error: "Wrong username and password combination" });
+		} else {
+			const accessToken = createTokens(user);
+
+			res.cookie("access-token", accessToken, {
+				maxAge: 3600000,
+				httpOnly: true
+			});
+
+			res.json("LOGGED IN");
 		}
 	});
-
-	res.json("LOGGED IN");
 });
 
-app.get("/profile", (req, res) => {
-	res.json("profile");
+app.get("/profile", validateToken, (req, res) => {
+	res.json(`Hello ${req.body.username}`);
 });
 
 db.sequelize.sync().then(() => {
